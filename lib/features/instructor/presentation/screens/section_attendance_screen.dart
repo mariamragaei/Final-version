@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:attendro/core/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart';
 
 class StudentRecord {
   final String name;
@@ -107,26 +111,38 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
         });
 
         if (isEnrolled) {
-          final studentId = data['studentId'] ?? data['id'] ?? doc.id.substring(0, 5);
+          String email = data['email'] ?? '';
+          String extractedId = '';
+          if (email.contains('@')) {
+            extractedId = email.split('@')[0];
+          }
+          
+          // Try all possible field names for student ID
+          final studentIdRaw = data['studentId'] ?? data['student_id'] ?? data['id'] ?? data['id_number'] ?? (extractedId.isNotEmpty ? extractedId : doc.id.substring(0, 5));
+          final studentId = studentIdRaw.toString();
+          
           int attended = attendanceCounts[doc.id] ?? 0;
           double percentage = totalSessions == 0 ? 0 : (attended / totalSessions) * 100;
 
+          // Normalize IDs for comparison (remove spaces, dashes, slashes)
+          String normalize(String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+          String normalizedId = normalize(studentId);
+
           // If this student was already added from the sheet, update their record with real data
-          if (addedCodes.contains(studentId.toString())) {
-            final existingIndex = loadedStudents.indexWhere((s) => s.id == studentId.toString());
-            if (existingIndex != -1) {
-              loadedStudents[existingIndex] = StudentRecord(
-                name: data['name'] ?? loadedStudents[existingIndex].name,
-                id: studentId.toString(),
-                uid: doc.id, // Use real Firebase UID
-                attendance: '${percentage.toInt()}%',
-              );
-            }
+          int existingIndex = loadedStudents.indexWhere((s) => normalize(s.id) == normalizedId);
+          
+          if (existingIndex != -1) {
+            loadedStudents[existingIndex] = StudentRecord(
+              name: data['name'] ?? loadedStudents[existingIndex].name,
+              id: studentId,
+              uid: doc.id, // Use real Firebase UID
+              attendance: '${percentage.toInt()}%',
+            );
           } else {
-            addedCodes.add(studentId.toString());
+            addedCodes.add(studentId);
             loadedStudents.add(StudentRecord(
               name: data['name'] ?? 'Unknown',
-              id: studentId.toString(),
+              id: studentId,
               uid: doc.id,
               attendance: '${percentage.toInt()}%',
             ));
@@ -151,6 +167,55 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
           .where((s) => s.id.contains(_searchController.text) || s.name.toLowerCase().contains(_searchController.text.toLowerCase()))
           .toList();
     });
+  }
+
+  Future<void> _generateAttendancePdf() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Attendance Report - ${widget.courseCode}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(_selectedWeek),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              children: [
+                pw.TableRow(
+                  children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Student Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Student ID', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Attendance %', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                  ],
+                ),
+                ..._allStudents.map((s) => pw.TableRow(
+                  children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(s.name)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(s.id)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(s.attendance)),
+                  ],
+                )),
+              ],
+            ),
+          ];
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'Attendance_${widget.courseCode}_$_selectedWeek.pdf',
+    );
   }
 
   @override
@@ -190,7 +255,10 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
                   ),
                   Row(
                     children: [
-                      Image.asset('assets/images/icons/printer.png', width: 22, color: AppColors.primary),
+                      GestureDetector(
+                        onTap: _generateAttendancePdf,
+                        child: Image.asset('assets/images/icons/printer.png', width: 22, color: AppColors.primary),
+                      ),
                       const SizedBox(width: 16),
                       GestureDetector(
                         onTap: () => setState(() => _isSearchMode = !_isSearchMode),

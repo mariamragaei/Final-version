@@ -3,6 +3,7 @@ import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/core/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class InstructorProfileScreen extends StatelessWidget {
   const InstructorProfileScreen({super.key});
@@ -52,7 +53,7 @@ class InstructorProfileScreen extends StatelessWidget {
                                 MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                               );
                             },
-                            child: const Icon(Icons.notifications_none, color: AppColors.primary, size: 28),
+                            child: const NotificationBell(size: 28),
                           ),
                           const SizedBox(width: 16),
                           const Icon(Icons.person_outline, color: AppColors.primary, size: 28),
@@ -119,7 +120,9 @@ class InstructorProfileScreen extends StatelessWidget {
                         }
 
                         if (assignedTo.isNotEmpty) {
-                          courseWidgets.add(_buildReportItem('$title: ${assignedTo.join(", ")}'));
+                          for (var assignment in assignedTo) {
+                            courseWidgets.add(_buildReportItem('$title - $assignment'));
+                          }
                         }
                       }
 
@@ -194,14 +197,32 @@ class InstructorProfileScreen extends StatelessWidget {
 
   Widget _buildReportItem(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        '• $text',
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

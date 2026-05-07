@@ -6,6 +6,7 @@ import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:attendro/features/student/presentation/screens/scanner_screen.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -134,7 +135,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                           );
                         },
-                        icon: Image.asset('assets/images/icons/notification.png', width: 24),
+                        icon: const NotificationBell(size: 24, useAsset: true),
                       ),
                       const SizedBox(width: 4),
                       IconButton(

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/auth_service.dart';
 import 'package:attendro/core/services/absence_service.dart';
 import 'package:attendro/features/student/presentation/screens/student_profile_screen.dart' as attendro_profile;
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -89,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         onPressed: () {
                           // Already on notifications screen
                         },
-                        icon: const Icon(Icons.notifications_none, color: AppColors.primary, size: 28),
+                        icon: const NotificationBell(size: 28),
                       ),
                       const SizedBox(width: 4),
                       IconButton(

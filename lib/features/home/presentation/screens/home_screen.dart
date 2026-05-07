@@ -9,6 +9,7 @@ import 'package:attendro/features/student/presentation/screens/scanner_screen.da
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/auth_service.dart';
 import 'package:attendro/core/services/absence_service.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onSeeAll;
@@ -82,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                         );
                       },
-                      child: Image.asset('assets/images/icons/notification.png', width: 24),
+                      child: const NotificationBell(size: 24, useAsset: true),
                     ),
                     const SizedBox(width: 16),
                     GestureDetector(

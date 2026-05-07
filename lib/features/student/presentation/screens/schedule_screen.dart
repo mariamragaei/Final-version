@@ -4,6 +4,7 @@ import 'package:attendro/core/services/auth_service.dart';
 import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/features/student/presentation/screens/student_profile_screen.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({super.key});
@@ -38,7 +39,7 @@ class ScheduleScreen extends StatelessWidget {
                             MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                           );
                         },
-                        icon: const Icon(Icons.notifications_none, color: AppColors.primary, size: 28),
+                        icon: const NotificationBell(size: 28),
                       ),
                       const SizedBox(width: 4),
                       IconButton(

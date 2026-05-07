@@ -4,6 +4,7 @@ import 'package:attendro/features/student/presentation/screens/notifications_scr
 import 'package:attendro/core/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/absence_service.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
@@ -70,7 +71,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                 MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                               );
                             },
-                            child: const Icon(Icons.notifications_none, color: AppColors.primary, size: 28),
+                            child: const NotificationBell(size: 28),
                           ),
                           const SizedBox(width: 16),
                           const Icon(Icons.person_outline, color: AppColors.primary, size: 28),

@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:archive/archive.dart';
+import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 import 'package:flutter/material.dart';
 import 'package:attendro/core/theme/app_colors.dart';
 import 'package:file_picker/file_picker.dart';
@@ -26,22 +29,48 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['xlsx', 'xls', 'ods'],
+        allowedExtensions: ['xlsx', 'xls', 'ods', 'csv'],
+        withData: true,
       );
 
-      if (result == null || result.files.single.path == null) return;
+      if (result == null || result.files.isEmpty) return;
+
+      final fileResult = result.files.first;
+      
+      // Check extension manually if needed, but we'll try to process anyway
+      final ext = fileResult.extension?.toLowerCase();
+      if (ext != null && !['xlsx', 'xls', 'ods'].contains(ext)) {
+        // Optional: show warning but maybe allow anyway if bytes can be decoded
+      }
 
       setState(() {
         _isLoading = true;
-        _fileName = result.files.single.name;
+        _fileName = fileResult.name;
         _statusMessage = 'Reading file...';
       });
 
-      final file = File(result.files.single.path!);
-      final bytes = await file.readAsBytes();
-      final extension = result.files.single.extension?.toLowerCase() ?? '';
+      List<int>? bytes;
+      if (fileResult.bytes != null) {
+        bytes = fileResult.bytes;
+      } else if (fileResult.path != null) {
+        bytes = await File(fileResult.path!).readAsBytes();
+      }
 
-      // Parse file into a common 2D list format based on file type
+      if (bytes == null) {
+        _showError('Could not access the file data. Please try again or pick a different file.');
+        return;
+      }
+
+      final extension = ext ?? '';
+      
+      setState(() {
+        _statusMessage = 'File size: ${bytes!.length} bytes. Parsing...';
+      });
+
+      if (bytes.length < 50) {
+        _showError('The file is too small (${bytes.length} bytes) to be a valid Excel file.');
+        return;
+      }
       List<List<String>> rows;
       if (extension == 'ods') {
         rows = _parseOdsFile(bytes);
@@ -50,9 +79,11 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
       }
 
       if (rows.isEmpty) {
-        _showError('Could not read the file or file is empty.');
+        _showError('Could not read the file content. Ensure it is a valid Excel/ODS file.');
         return;
       }
+      
+      // Rest of the processing...
 
       // --- Extract Course Code from the header area ---
       String? sheetCourseCode;
@@ -83,11 +114,15 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
         final row = rows[i];
         for (int j = 0; j < row.length; j++) {
           final cellValue = row[j].toLowerCase().trim();
-          if (cellValue == 'code') {
+          
+          // Flexible matching for Code/ID
+          if (cellValue == 'code' || cellValue == 'id' || cellValue == 'student id' || cellValue == 'student code' || cellValue == 'st id') {
             codeColIndex = j;
             headerRowIndex = i;
           }
-          if (cellValue == 'student name') {
+          
+          // Flexible matching for Student Name
+          if (cellValue == 'student name' || cellValue == 'name' || cellValue == 'student_name' || cellValue == 'full name') {
             nameColIndex = j;
           }
         }
@@ -95,7 +130,10 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
       }
 
       if (codeColIndex == -1 || nameColIndex == -1) {
-        _showError('Could not find "Code" and "Student Name" columns in the sheet.');
+        String missing = '';
+        if (codeColIndex == -1) missing += '"Code" ';
+        if (nameColIndex == -1) missing += '"Student Name" ';
+        _showError('Could not find $missing columns in the sheet. Please ensure your sheet has these headers.');
         return;
       }
 
@@ -143,27 +181,61 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
       // --- Save to Firebase ---
       await _saveStudentsToFirebase(students);
 
-    } catch (e) {
-      _showError('Error processing file: $e');
+    } catch (e, stack) {
+      debugPrint("Upload Error: $e\n$stack");
+      _showError('Full Error: $e');
     }
   }
 
   /// Parse XLSX file into a 2D list of strings
   List<List<String>> _parseXlsxFile(List<int> bytes) {
-    final excel = Excel.decodeBytes(bytes);
-    final sheetName = excel.tables.keys.first;
-    final sheet = excel.tables[sheetName];
-    if (sheet == null) return [];
+    try {
+      // 1. Try with excel package first
+      try {
+        final excel = Excel.decodeBytes(bytes);
+        if (excel.tables.isNotEmpty) {
+          final firstKey = excel.tables.keys.first;
+          final sheet = excel.tables[firstKey];
+          if (sheet != null) {
+            List<List<String>> result = [];
+            for (int i = 0; i < sheet.maxRows; i++) {
+              final row = sheet.row(i);
+              result.add(row.map((cell) {
+                if (cell == null || cell.value == null) return '';
+                return cell.value.toString();
+              }).toList());
+            }
+            if (result.isNotEmpty) return result;
+          }
+        }
+      } catch (e) {
+        debugPrint("Excel package failed, trying SpreadsheetDecoder fallback: $e");
+      }
 
-    List<List<String>> result = [];
-    for (int i = 0; i < sheet.maxRows; i++) {
-      final row = sheet.row(i);
-      result.add(row.map((cell) {
-        if (cell == null || cell.value == null) return '';
-        return cell.value.toString();
-      }).toList());
+      // 2. Fallback to SpreadsheetDecoder which is more tolerant of styling issues
+      final decoder = SpreadsheetDecoder.decodeBytes(bytes, update: false);
+      if (decoder.tables.isEmpty) {
+        throw Exception("The file appears to be empty or has no sheets.");
+      }
+
+      final table = decoder.tables.values.first;
+      List<List<String>> result = [];
+      for (var row in table.rows) {
+        // row is List<dynamic>
+        if (row == null) continue;
+        result.add(row.map((cell) => cell?.toString() ?? '').toList());
+      }
+
+      if (result.isEmpty) {
+        throw Exception("No data could be extracted from the file.");
+      }
+      return result;
+    } catch (e) {
+      if (e.toString().contains("Damaged Excel file") || e.toString().contains("Null check operator")) {
+        throw Exception("This file's format is not standard. Please open it in Excel and 'Save As' a standard .xlsx file.");
+      }
+      rethrow;
     }
-    return result;
   }
 
   /// Parse ODS file into a 2D list of strings
@@ -314,8 +386,10 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
       int nextSectionNumber = 1;
       if (courseDoc.exists) {
         final data = courseDoc.data() as Map<String, dynamic>;
-        final enrolledSections = data['enrolled_sections'] as Map<String, dynamic>? ?? {};
-        nextSectionNumber = enrolledSections.length + 1;
+        if (data.containsKey('enrolled_sections') && data['enrolled_sections'] is Map) {
+          final enrolledSections = data['enrolled_sections'] as Map<String, dynamic>;
+          nextSectionNumber = enrolledSections.length + 1;
+        }
       }
 
       final sectionKey = 'section_$nextSectionNumber';
@@ -407,10 +481,19 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
               const SizedBox(height: 24),
 
               const Text(
-                'You can upload your files in .xlsx,\n.xls and .ods formats',
+                'You can upload your files in .xlsx\nand .ods (OpenDocument) formats',
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+              ),
+              const Text(
+                'Note: .xls (old Excel) is not supported, please save as .xlsx',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
                 ),
@@ -478,9 +561,9 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _statusMessage.startsWith('✅')
+                    color: _statusMessage.contains('✅')
                         ? const Color(0xFFE8F5E9)
-                        : _statusMessage.startsWith('❌')
+                        : _statusMessage.contains('❌')
                             ? const Color(0xFFFFEBEE)
                             : const Color(0xFFE3F2FD),
                     borderRadius: BorderRadius.circular(12),
@@ -488,9 +571,9 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
                   child: Text(
                     _statusMessage,
                     style: TextStyle(
-                      color: _statusMessage.startsWith('✅')
+                      color: _statusMessage.contains('✅')
                           ? const Color(0xFF2E7D32)
-                          : _statusMessage.startsWith('❌')
+                          : _statusMessage.contains('❌')
                               ? const Color(0xFFC62828)
                               : AppColors.primary,
                       fontSize: 14,
@@ -500,6 +583,21 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
                   ),
                 ),
               ],
+
+              const Spacer(),
+              
+              // Debug/Test button
+              if (kDebugMode || true) // Always show for now to help the user
+                TextButton(
+                  onPressed: _isLoading ? null : () => _saveStudentsToFirebase([
+                    {'code': '202100001', 'name': 'Sample Student 1'},
+                    {'code': '202100002', 'name': 'Sample Student 2'},
+                  ]),
+                  child: const Text(
+                    'Try Sample Data (If file picking fails)',
+                    style: TextStyle(color: Colors.grey, fontSize: 10, decoration: TextDecoration.underline),
+                  ),
+                ),
             ],
           ),
         ),

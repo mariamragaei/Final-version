@@ -42,8 +42,12 @@ dependencies:
   cloud_firestore: ^6.3.0
   firebase_messaging: ^16.2.0
   flutter_local_notifications: ^21.0.0
-  file_picker: ^8.0.0
-  excel: ^4.0.6
+  file_picker: ^8.1.7
+  excel: any
+  spreadsheet_decoder: ^2.1.1
+  pdf: ^3.10.8
+  printing: ^5.11.1
+  path_provider: ^2.1.2
   archive: ^3.6.1
   xml: ^6.5.0
 

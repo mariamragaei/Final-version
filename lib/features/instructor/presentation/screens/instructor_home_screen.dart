@@ -4,8 +4,10 @@ import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/home/presentation/widgets/mini_calendar.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/features/instructor/presentation/screens/instructor_profile_screen.dart';
+import 'package:attendro/features/instructor/presentation/screens/course_attendance_details_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/auth_service.dart';
+import 'package:attendro/core/widgets/notification_bell.dart';
 
 class InstructorHomeScreen extends StatelessWidget {
   final VoidCallback? onSeeAll;
@@ -36,7 +38,7 @@ class InstructorHomeScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                         );
                       },
-                      icon: const Icon(Icons.notifications_none, color: AppColors.primary, size: 28),
+                      icon: const NotificationBell(size: 28),
                     ),
                     const SizedBox(width: 4),
                     IconButton(
@@ -179,8 +181,10 @@ class InstructorHomeScreen extends StatelessWidget {
 
                     if (isAssigned) {
                       courseCards.add(_buildCourseCard(
+                        context: context,
                         code: data['code'] ?? doc.id,
                         title: data['title'] ?? 'Course',
+                        subtitle: data['subtitle'] ?? 'Artificial Intelligence',
                       ));
                       courseCards.add(const SizedBox(width: 16));
                     }
@@ -198,55 +202,6 @@ class InstructorHomeScreen extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 40),
-
-            const Text(
-              'Happening now',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Center(
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.70,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.primary, width: 1.2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.school_outlined,
-                          color: AppColors.primary,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text('-AI402', style: TextStyle(color: Colors.black54, fontSize: 9, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Computational Cognitive Systems\nArtificial Intelligence',
-                      style: TextStyle(color: Colors.black54, fontSize: 9, height: 1.3),
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 48),
           ],
         ),
@@ -254,43 +209,62 @@ class InstructorHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCourseCard({required String code, required String title}) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary, width: 1.2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.book_outlined,
-                color: AppColors.primary,
-                size: 24,
-              ),
+  Widget _buildCourseCard({
+    required BuildContext context,
+    required String code,
+    required String title,
+    required String subtitle,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CourseAttendanceDetailsScreen(
+              courseCode: code,
+              courseTitle: title,
+              courseSubtitle: subtitle,
             ),
           ),
-          const Spacer(),
-          Text('-$code', style: const TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(color: Colors.black54, fontSize: 8, height: 1.2),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        );
+      },
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary, width: 1.2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.book_outlined,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text('-$code', style: const TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: const TextStyle(color: Colors.black54, fontSize: 8, height: 1.2),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
