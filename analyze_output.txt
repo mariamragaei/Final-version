@@ -1,0 +1,36 @@
+Analyzing attendro-main-main...                                 
+
+   info • Don't invoke 'print' in production code • lib/check_user.dart:17:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/check_user.dart:22:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/check_user.dart:24:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/check_user.dart:27:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/services/auth_service.dart:20:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/services/auth_service.dart:33:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/services/auth_service.dart:55:7 • avoid_print
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/core/services/auth_service.dart:70:9 • use_null_aware_elements
+   info • Don't invoke 'print' in production code • lib/core/services/auth_service.dart:78:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/services/auth_service.dart:91:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_home_screen.dart:279:46 • deprecated_member_use
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/features/admin/presentation/screens/admin_main_layout_screen.dart:32:7 • deprecated_member_use
+warning • Unused import: 'package:attendro/features/home/presentation/screens/main_layout_screen.dart' • lib/features/auth/presentation/screens/login_screen.dart:7:8 • unused_import
+warning • Unused import: 'package:attendro/features/instructor/presentation/screens/instructor_main_layout.dart' • lib/features/auth/presentation/screens/login_screen.dart:8:8 • unused_import
+warning • Unused import: 'package:attendro/features/admin/presentation/screens/admin_main_layout_screen.dart' • lib/features/auth/presentation/screens/login_screen.dart:9:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/pending_approval_screen.dart' • lib/features/auth/presentation/screens/login_screen.dart:11:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/approval_status_screen.dart' • lib/features/auth/presentation/screens/login_screen.dart:12:8 • unused_import
+warning • Unused import: 'package:attendro/features/home/presentation/screens/main_layout_screen.dart' • lib/features/auth/presentation/screens/role_screen.dart:4:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/pending_approval_screen.dart' • lib/features/auth/presentation/screens/role_screen.dart:5:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/role_screen.dart' • lib/features/auth/presentation/screens/signup_screen.dart:5:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/otp_verification_screen.dart' • lib/features/auth/presentation/screens/signup_screen.dart:6:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/home/presentation/screens/home_screen.dart:288:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/home/presentation/screens/home_screen.dart:352:76 • deprecated_member_use
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/features/home/presentation/screens/main_layout_screen.dart:37:7 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/instructor/presentation/screens/instructor_home_screen.dart:229:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/instructor/presentation/screens/instructor_home_screen.dart:274:42 • deprecated_member_use
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/features/instructor/presentation/screens/instructor_main_layout.dart:37:7 • deprecated_member_use
+warning • Unused import: 'package:cloud_firestore/cloud_firestore.dart' • lib/features/landing/presentation/screens/landing_screen.dart:2:8 • unused_import
+warning • Unused import: 'package:attendro/features/auth/presentation/screens/login_screen.dart' • lib/features/landing/presentation/screens/landing_screen.dart:4:8 • unused_import
+warning • Unused import: 'package:attendro/core/services/auth_service.dart' • lib/features/landing/presentation/screens/landing_screen.dart:6:8 • unused_import
+   info • Unnecessary use of multiple underscores • lib/features/student/presentation/screens/notifications_screen.dart:135:51 • unnecessary_underscores
+   info • Unnecessary use of 'toList' in a spread • lib/features/student/presentation/screens/schedule_screen.dart:115:32 • unnecessary_to_list_in_spreads
+
+32 issues found. (ran in 2.2s)

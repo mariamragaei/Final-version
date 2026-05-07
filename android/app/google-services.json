@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362847924501",
+    "project_id": "attendro-main",
+    "storage_bucket": "attendro-main.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362847924501:android:0fe03f9f8f734a15d6791c",
+        "android_client_info": {
+          "package_name": "com.attendro.app.attendro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDT2oKw3rnr6xZ53bYBkhQmOxDIqRodll4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
