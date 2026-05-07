@@ -5,6 +5,7 @@ import 'package:attendro/features/home/presentation/widgets/mini_calendar.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:attendro/features/student/presentation/screens/scanner_screen.dart';
+import 'package:attendro/features/student/presentation/screens/records_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/auth_service.dart';
@@ -237,8 +238,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(right: 16.0),
                             child: _buildCourseCard(
+                              context: context,
                               code: courseCode,
-                              title: '${course['title'] ?? ''}\n${course['subtitle'] ?? ''}',
+                              title: course['title'] ?? '',
+                              subtitle: course['subtitle'] ?? '',
                               absences: absences,
                               isWarning: isWarning,
                             ),
@@ -320,67 +323,83 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCourseCard({
+    required BuildContext context,
     required String code,
     required String title,
+    required String subtitle,
     required int absences,
     required bool isWarning,
   }) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isWarning ? const Color(0xFFFFCDD2) : AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isWarning ? Colors.red.shade400 : AppColors.primary,
-          width: isWarning ? 2 : 1.2,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecordsScreen(
+              courseCode: code,
+              courseTitle: title,
+              courseSubtitle: subtitle,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isWarning ? const Color(0xFFFFCDD2) : AppColors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isWarning ? Colors.red.shade400 : AppColors.primary,
+            width: isWarning ? 2 : 1.2,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isWarning)
-            Align(
-              alignment: Alignment.topRight,
-              child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 16),
-            ),
-          if (!isWarning)
-            const SizedBox(height: 4),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isWarning ? Colors.red.shade100 : AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isWarning)
+              Align(
+                alignment: Alignment.topRight,
+                child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 16),
               ),
-              child: Icon(
-                Icons.book_outlined,
-                color: isWarning ? Colors.red.shade700 : AppColors.primary,
-                size: 24,
+            if (!isWarning)
+              const SizedBox(height: 4),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isWarning ? Colors.red.shade100 : AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.book_outlined,
+                  color: isWarning ? Colors.red.shade700 : AppColors.primary,
+                  size: 24,
+                ),
               ),
             ),
-          ),
-          const Spacer(),
-          Text(
-            '-$code',
-            style: TextStyle(
-              color: isWarning ? Colors.red.shade800 : Colors.black54,
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
+            const Spacer(),
+            Text(
+              '-$code',
+              style: TextStyle(
+                color: isWarning ? Colors.red.shade800 : Colors.black54,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: TextStyle(
-              color: isWarning ? Colors.red.shade700 : Colors.black54,
-              fontSize: 8,
-              height: 1.2,
+            const SizedBox(height: 2),
+            Text(
+              '$title\n$subtitle',
+              style: TextStyle(
+                color: isWarning ? Colors.red.shade700 : Colors.black54,
+                fontSize: 8,
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

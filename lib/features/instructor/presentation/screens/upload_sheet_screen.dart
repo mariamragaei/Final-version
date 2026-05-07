@@ -115,14 +115,20 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
         for (int j = 0; j < row.length; j++) {
           final cellValue = row[j].toLowerCase().trim();
           
-          // Flexible matching for Code/ID
-          if (cellValue == 'code' || cellValue == 'id' || cellValue == 'student id' || cellValue == 'student code' || cellValue == 'st id') {
+          // Flexible matching for Code/ID (English & Arabic)
+          if (cellValue == 'code' || cellValue == 'id' || cellValue == 'student id' || 
+              cellValue == 'student code' || cellValue == 'st id' || 
+              cellValue == 'كود' || cellValue == 'رقم' || cellValue == 'الرقم' || 
+              cellValue == 'رقم الطالب' || cellValue == 'كود الطالب' || 
+              cellValue == 'الرقم الجامعي') {
             codeColIndex = j;
             headerRowIndex = i;
           }
           
-          // Flexible matching for Student Name
-          if (cellValue == 'student name' || cellValue == 'name' || cellValue == 'student_name' || cellValue == 'full name') {
+          // Flexible matching for Student Name (English & Arabic)
+          if (cellValue == 'student name' || cellValue == 'name' || 
+              cellValue == 'student_name' || cellValue == 'full name' ||
+              cellValue == 'الاسم' || cellValue == 'اسم الطالب' || cellValue == 'اسم') {
             nameColIndex = j;
           }
         }
@@ -131,8 +137,11 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
 
       if (codeColIndex == -1 || nameColIndex == -1) {
         String missing = '';
-        if (codeColIndex == -1) missing += '"Code" ';
-        if (nameColIndex == -1) missing += '"Student Name" ';
+        if (codeColIndex == -1) missing += '"Code/ID" (كود/رقم) ';
+        if (nameColIndex == -1) {
+          if (missing.isNotEmpty) missing += 'and ';
+          missing += '"Student Name" (اسم الطالب) ';
+        }
         _showError('Could not find $missing columns in the sheet. Please ensure your sheet has these headers.');
         return;
       }
@@ -481,7 +490,16 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
               const SizedBox(height: 24),
 
               const Text(
-                'You can upload your files in .xlsx\nand .ods (OpenDocument) formats',
+                'Recommended: Use .ods (OpenDocument) format',
+                style: TextStyle(
+                  color: Color(0xFF2C5E7A),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  height: 1.4,
+                ),
+              ),
+              const Text(
+                'You can also upload standard .xlsx files, but for the most reliable results, please use .ods.',
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 14,
@@ -489,8 +507,9 @@ class _UploadSheetScreenState extends State<UploadSheetScreen> {
                   height: 1.4,
                 ),
               ),
+              const SizedBox(height: 8),
               const Text(
-                'Note: .xls (old Excel) is not supported, please save as .xlsx',
+                'Note: .xls (old Excel) is not supported. If your file is .xlsx and fails, open it in Excel/Google Sheets and "Save As" .ods.',
                 style: TextStyle(
                   color: Colors.redAccent,
                   fontSize: 11,

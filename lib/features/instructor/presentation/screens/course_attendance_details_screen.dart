@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:attendro/core/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/instructor/presentation/screens/section_attendance_screen.dart';
@@ -56,15 +58,30 @@ class CourseAttendanceDetailsScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               Expanded(
-                child: ListView(
-                  children: [
-                    _buildAttendanceCard(
-                      context: context,
-                      code: courseCode,
-                      title: courseTitle,
-                      subtitle: courseSubtitle,
-                    ),
-                  ],
+                child: StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(AuthService().currentUser?.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    String role = 'instructor';
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                      final data = snapshot.data!.data() as Map<String, dynamic>;
+                      role = data['role'] ?? 'instructor';
+                    }
+
+                    return ListView(
+                      children: [
+                        _buildAttendanceCard(
+                          context: context,
+                          code: courseCode,
+                          title: courseTitle,
+                          subtitle: courseSubtitle,
+                          role: role,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -79,7 +96,10 @@ class CourseAttendanceDetailsScreen extends StatelessWidget {
     required String code,
     required String title,
     required String subtitle,
+    required String role,
   }) {
+    final bool isTA = role.toLowerCase() == 'ta';
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFBDCEDB),
@@ -137,25 +157,27 @@ class CourseAttendanceDetailsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SectionAttendanceScreen(title: 'Lecture Attendance', courseCode: code),
+                if (!isTA) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => SectionAttendanceScreen(title: 'Lecture Attendance', courseCode: code),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Lecture attendance',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
                       ),
-                    );
-                  },
-                  child: const Text(
-                    'Lecture attendance',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

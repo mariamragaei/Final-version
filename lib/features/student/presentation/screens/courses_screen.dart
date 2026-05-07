@@ -6,6 +6,7 @@ import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/student/presentation/screens/notifications_screen.dart';
 import 'package:attendro/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:attendro/features/student/presentation/screens/scanner_screen.dart';
+import 'package:attendro/features/student/presentation/screens/records_screen.dart';
 import 'package:attendro/core/widgets/notification_bell.dart';
 
 class CoursesScreen extends StatefulWidget {
@@ -225,94 +226,108 @@ class _CoursesScreenState extends State<CoursesScreen> {
     required int absences,
     required bool isWarning,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isWarning ? const Color(0xFFFFCDD2) : const Color(0xFFBDCEDB),
-        borderRadius: BorderRadius.circular(12),
-        border: isWarning ? Border.all(color: Colors.red.shade400, width: 2) : null,
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '- $code',
-                style: TextStyle(
-                  color: isWarning ? Colors.red.shade800 : AppColors.primary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecordsScreen(
+              courseCode: code,
+              courseTitle: title,
+              courseSubtitle: subtitle,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isWarning ? const Color(0xFFFFCDD2) : const Color(0xFFBDCEDB),
+          borderRadius: BorderRadius.circular(12),
+          border: isWarning ? Border.all(color: Colors.red.shade400, width: 2) : null,
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '- $code',
+                  style: TextStyle(
+                    color: isWarning ? Colors.red.shade800 : AppColors.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              if (isWarning)
-                Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 22),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$absences absences',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                if (isWarning)
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 22),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$absences absences',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: isWarning ? Colors.red.shade800 : AppColors.primary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+                    ],
+                  ),
+              ],
             ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: isWarning ? Colors.red.shade700 : AppColors.primary,
-              fontSize: 14,
-            ),
-          ),
-          if (_absencesLoaded && !isWarning && absences > 0) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
-              'Absences: $absences / 3 allowed',
+              title,
               style: TextStyle(
-                color: Colors.orange.shade700,
-                fontSize: 11,
+                color: isWarning ? Colors.red.shade800 : AppColors.primary,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ScannerScreen(courseName: title),
-                  ),
-                );
-              },
-              child: Text(
-                'Attend',
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: isWarning ? Colors.red.shade700 : AppColors.primary,
+                fontSize: 14,
+              ),
+            ),
+            if (_absencesLoaded && !isWarning && absences > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Absences: $absences / 3 allowed',
                 style: TextStyle(
-                  color: isWarning ? Colors.red.shade800 : AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ScannerScreen(courseName: title),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Attend',
+                  style: TextStyle(
+                    color: isWarning ? Colors.red.shade800 : AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
