@@ -20,6 +20,7 @@ class _GenerateQrScreenState extends State<GenerateQrScreen> {
   late Timer _timer;
   late int _currentTimestamp;
   String _sessionId = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -39,24 +40,68 @@ class _GenerateQrScreenState extends State<GenerateQrScreen> {
   Future<void> _registerSession() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final code = widget.courseCode.isNotEmpty ? widget.courseCode : widget.courseName;
-    _sessionId = '${code}_$today';
+    
+    final uid = AuthService().currentUser?.uid ?? '';
+    String sessionType = 'Lecture';
+    if (uid.isNotEmpty) {
+      final role = await AuthService().getUserRole(uid);
+      if (role?.toLowerCase() == 'ta') {
+        sessionType = 'Section';
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _sessionId = '${code}_${sessionType}_$today';
+      });
+    }
 
     try {
       final docRef = FirebaseFirestore.instance.collection('attendance_sessions').doc(_sessionId);
       final docSnap = await docRef.get();
 
       if (!docSnap.exists) {
+        final existingSessions = await FirebaseFirestore.instance
+            .collection('attendance_sessions')
+            .where('courseCode', isEqualTo: code)
+            .where('sessionType', isEqualTo: sessionType)
+            .get();
+
+        List<String> uniqueDates = [];
+        for (var doc in existingSessions.docs) {
+          final data = doc.data();
+          if (data.containsKey('date')) {
+            String d = data['date'] as String;
+            if (!uniqueDates.contains(d)) {
+              uniqueDates.add(d);
+            }
+          }
+        }
+        uniqueDates.sort();
+        
+        int weekNumber = uniqueDates.length + 1;
+        String weekString = 'Week $weekNumber';
+
         await docRef.set({
           'courseCode': code,
           'courseName': widget.courseName,
           'date': today,
-          'instructorId': AuthService().currentUser?.uid ?? '',
+          'instructorId': uid,
+          'sessionType': sessionType,
+          'week': weekString,
+          'timestamp': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'attendedStudents': [],
         });
       }
     } catch (e) {
       debugPrint("Error registering session: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -125,14 +170,16 @@ class _GenerateQrScreenState extends State<GenerateQrScreen> {
                       color: const Color(0xFFE9F1F6), // Matches the light blue bg
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: QrImageView(
-                      data: _generateQrData(),
-                      version: QrVersions.auto,
-                      size: 200,
-                      gapless: false,
-                      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primary),
-                      dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.primary),
-                    ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: AppColors.primary)
+                      : QrImageView(
+                          data: _generateQrData(),
+                          version: QrVersions.auto,
+                          size: 200,
+                          gapless: false,
+                          eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primary),
+                          dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.primary),
+                        ),
                   ),
                 ),
               ),

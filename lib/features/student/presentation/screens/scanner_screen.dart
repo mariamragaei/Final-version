@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendro/core/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:attendro/core/theme/app_colors.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ScannerScreen extends StatefulWidget {
   final String courseName;
@@ -22,6 +24,22 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void dispose() {
     controller.dispose();
     super.dispose();
+  }
+
+  Future<String?> _getDeviceId() async {
+    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id; // Unique ID on Android
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor; // Unique ID on iOS
+      }
+    } catch (e) {
+      debugPrint("Error getting device info: $e");
+    }
+    return null;
   }
 
   Future<void> _handleScan(String rawValue) async {
@@ -46,6 +64,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
       final uid = AuthService().currentUser?.uid;
       if (uid == null) throw Exception("User not logged in.");
+
+      // Get Device ID for anti-cheating
+      final deviceId = await _getDeviceId();
 
       final studentDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (studentDoc.exists) {
@@ -75,9 +96,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
       final sessionData = sessionDoc.data() as Map<String, dynamic>;
       final List<dynamic> attendedStudents = sessionData['attendedStudents'] ?? [];
+      final List<dynamic> usedDeviceIds = sessionData['usedDeviceIds'] ?? [];
 
       if (attendedStudents.contains(uid)) {
         throw Exception("You have already recorded your attendance for this session.");
+      }
+
+      // Check if device already used
+      if (deviceId != null && usedDeviceIds.contains(deviceId)) {
+        throw Exception("This device has already been used to record attendance for this session.");
       }
 
       await FirebaseFirestore.instance
@@ -85,6 +112,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           .doc(qrSessionId)
           .update({
         'attendedStudents': FieldValue.arrayUnion([uid]),
+        if (deviceId != null) 'usedDeviceIds': FieldValue.arrayUnion([deviceId]),
       });
 
       if (mounted) {

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:attendro/core/theme/app_colors.dart';
 import 'package:attendro/features/instructor/presentation/screens/instructor_home_screen.dart';
 import 'package:attendro/features/instructor/presentation/screens/instructor_courses_screen.dart';
-import 'package:attendro/features/instructor/presentation/screens/instructor_schedule_screen.dart';
+
 import 'package:attendro/features/instructor/presentation/screens/instructor_profile_screen.dart';
 
 class InstructorMainLayoutScreen extends StatefulWidget {
@@ -25,7 +25,6 @@ class _InstructorMainLayoutScreenState extends State<InstructorMainLayoutScreen>
     _screens = [
       InstructorHomeScreen(onSeeAll: () => setState(() => _currentIndex = 1)),
       const InstructorCoursesScreen(),
-      const InstructorScheduleScreen(),
       const InstructorProfileScreen(),
     ];
   }
@@ -105,17 +104,9 @@ class _InstructorMainLayoutScreenState extends State<InstructorMainLayoutScreen>
               ),
               BottomNavigationBarItem(
                 icon: Image.asset(
-                  'assets/images/icons/schedule.png', 
-                  height: 24, 
-                  color: _currentIndex == 2 ? AppColors.primary : AppColors.primary.withAlpha(153),
-                ),
-                label: 'Schedule',
-              ),
-              BottomNavigationBarItem(
-                icon: Image.asset(
                   'assets/images/icons/frame.png', 
                   height: 24, 
-                  color: _currentIndex == 3 ? AppColors.primary : AppColors.primary.withAlpha(153),
+                  color: _currentIndex == 2 ? AppColors.primary : AppColors.primary.withAlpha(153),
                 ),
                 label: 'Profile',
               ),

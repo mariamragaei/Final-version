@@ -51,6 +51,7 @@ dependencies:
   archive: ^3.6.1
   xml: ^6.5.0
   mailer: ^7.1.0
+  device_info_plus: ^11.3.0
 
 dev_dependencies:
   flutter_test:

@@ -11,8 +11,15 @@ class StudentRecord {
   final String id;
   final String uid;
   final String attendance;
+  final double overallPercentage;
 
-  StudentRecord({required this.name, required this.id, required this.uid, required this.attendance});
+  StudentRecord({
+    required this.name, 
+    required this.id, 
+    required this.uid, 
+    required this.attendance,
+    required this.overallPercentage,
+  });
 }
 
 class SectionAttendanceScreen extends StatefulWidget {
@@ -25,12 +32,14 @@ class SectionAttendanceScreen extends StatefulWidget {
 }
 
 class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
-  String _selectedWeek = 'Week 6';
+  String _selectedWeek = 'All Weeks';
   bool _isSearchMode = false;
   final TextEditingController _searchController = TextEditingController();
   
   List<StudentRecord> _allStudents = [];
   List<StudentRecord> _filteredStudents = [];
+  List<QueryDocumentSnapshot> _courseSessions = [];
+  List<Map<String, dynamic>> _allStudentData = [];
   bool _isLoading = true;
 
   @override
@@ -43,25 +52,21 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
   Future<void> _fetchAttendanceData() async {
     setState(() => _isLoading = true);
     try {
-      // Get attendance sessions for this course
-      final sessionsSnap = await FirebaseFirestore.instance
+      Query query = FirebaseFirestore.instance
           .collection('attendance_sessions')
-          .where('courseCode', isEqualTo: widget.courseCode)
-          .get();
+          .where('courseCode', isEqualTo: widget.courseCode);
           
-      int totalSessions = sessionsSnap.docs.length;
-      
-      Map<String, int> attendanceCounts = {};
-      for (var doc in sessionsSnap.docs) {
-        final data = doc.data();
-        final List<dynamic> attended = data['attendedStudents'] ?? [];
-        for (var uid in attended) {
-          attendanceCounts[uid.toString()] = (attendanceCounts[uid.toString()] ?? 0) + 1;
-        }
+      if (widget.title == 'Section Attendance') {
+        query = query.where('sessionType', isEqualTo: 'Section');
+      } else if (widget.title == 'Lecture Attendance') {
+        query = query.where('sessionType', isEqualTo: 'Lecture');
       }
+      
+      final sessionsSnap = await query.get();
+      _courseSessions = sessionsSnap.docs;
 
-      List<StudentRecord> loadedStudents = [];
-      Set<String> addedCodes = {}; // Track added student codes to avoid duplicates
+      List<Map<String, dynamic>> rawStudents = [];
+      Set<String> addedCodes = {};
 
       // --- Source 1: Read from enrolled_sections (uploaded Excel sheets) ---
       final courseDoc = await FirebaseFirestore.instance
@@ -84,12 +89,11 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
 
             if (code.isNotEmpty && !addedCodes.contains(code)) {
               addedCodes.add(code);
-              loadedStudents.add(StudentRecord(
-                name: name,
-                id: code,
-                uid: code, // Use code as uid for sheet-uploaded students
-                attendance: totalSessions == 0 ? '0%' : '0%',
-              ));
+              rawStudents.add({
+                'name': name,
+                'id': code,
+                'uid': code,
+              });
             }
           }
         }
@@ -117,55 +121,124 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
             extractedId = email.split('@')[0];
           }
           
-          // Try all possible field names for student ID
           final studentIdRaw = data['studentId'] ?? data['student_id'] ?? data['id'] ?? data['id_number'] ?? (extractedId.isNotEmpty ? extractedId : doc.id.substring(0, 5));
           final studentId = studentIdRaw.toString();
           
-          int attended = attendanceCounts[doc.id] ?? 0;
-          double percentage = totalSessions == 0 ? 0 : (attended / totalSessions) * 100;
-
-          // Normalize IDs for comparison (remove spaces, dashes, slashes)
           String normalize(String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
           String normalizedId = normalize(studentId);
 
-          // If this student was already added from the sheet, update their record with real data
-          int existingIndex = loadedStudents.indexWhere((s) => normalize(s.id) == normalizedId);
+          int existingIndex = rawStudents.indexWhere((s) => normalize(s['id']) == normalizedId);
           
           if (existingIndex != -1) {
-            loadedStudents[existingIndex] = StudentRecord(
-              name: data['name'] ?? loadedStudents[existingIndex].name,
-              id: studentId,
-              uid: doc.id, // Use real Firebase UID
-              attendance: '${percentage.toInt()}%',
-            );
+            rawStudents[existingIndex] = {
+              'name': data['name'] ?? rawStudents[existingIndex]['name'],
+              'id': studentId,
+              'uid': doc.id,
+            };
           } else {
             addedCodes.add(studentId);
-            loadedStudents.add(StudentRecord(
-              name: data['name'] ?? 'Unknown',
-              id: studentId,
-              uid: doc.id,
-              attendance: '${percentage.toInt()}%',
-            ));
+            rawStudents.add({
+              'name': data['name'] ?? 'Unknown',
+              'id': studentId,
+              'uid': doc.id,
+            });
           }
         }
       }
 
-      setState(() {
-        _allStudents = loadedStudents;
-        _filteredStudents = loadedStudents;
-        _isLoading = false;
-      });
+      _allStudentData = rawStudents;
+      _calculateAttendanceRecords();
+
     } catch (e) {
       debugPrint("Error fetching attendance data: $e");
       setState(() => _isLoading = false);
     }
   }
 
+  void _calculateAttendanceRecords() {
+    List<StudentRecord> loadedStudents = [];
+    int totalSessions = _courseSessions.length;
+    Map<String, int> attendanceCounts = {};
+    
+    for (var doc in _courseSessions) {
+      final data = doc.data() as Map<String, dynamic>;
+      final List<dynamic> attended = data['attendedStudents'] ?? [];
+      for (var uid in attended) {
+        attendanceCounts[uid.toString()] = (attendanceCounts[uid.toString()] ?? 0) + 1;
+      }
+    }
+
+    if (_selectedWeek == 'All Weeks') {
+      for (var s in _allStudentData) {
+        int attended = attendanceCounts[s['uid']] ?? 0;
+        double percentage = totalSessions == 0 ? 100.0 : (attended / totalSessions) * 100;
+        loadedStudents.add(StudentRecord(
+          name: s['name'],
+          id: s['id'],
+          uid: s['uid'],
+          attendance: '${percentage.toInt()}%',
+          overallPercentage: percentage,
+        ));
+      }
+    } else {
+      var weekSessions = _courseSessions.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['week'] == _selectedWeek;
+      }).toList();
+
+      if (weekSessions.isEmpty) {
+        for (var s in _allStudentData) {
+          int attended = attendanceCounts[s['uid']] ?? 0;
+          double percentage = totalSessions == 0 ? 100.0 : (attended / totalSessions) * 100;
+          loadedStudents.add(StudentRecord(
+            name: s['name'],
+            id: s['id'],
+            uid: s['uid'],
+            attendance: 'No Session',
+            overallPercentage: percentage,
+          ));
+        }
+      } else {
+        Set<String> weekAttended = {};
+        for (var doc in weekSessions) {
+          final data = doc.data() as Map<String, dynamic>;
+          final List<dynamic> attended = data['attendedStudents'] ?? [];
+          for (var uid in attended) {
+            weekAttended.add(uid.toString());
+          }
+        }
+
+        for (var s in _allStudentData) {
+          bool isPresent = weekAttended.contains(s['uid']);
+          int attended = attendanceCounts[s['uid']] ?? 0;
+          double percentage = totalSessions == 0 ? 100.0 : (attended / totalSessions) * 100;
+          loadedStudents.add(StudentRecord(
+            name: s['name'],
+            id: s['id'],
+            uid: s['uid'],
+            attendance: isPresent ? 'Present' : 'Absent',
+            overallPercentage: percentage,
+          ));
+        }
+      }
+    }
+
+    setState(() {
+      _allStudents = loadedStudents;
+      _onSearchChanged();
+      _isLoading = false;
+    });
+  }
+
   void _onSearchChanged() {
     setState(() {
-      _filteredStudents = _allStudents
-          .where((s) => s.id.contains(_searchController.text) || s.name.toLowerCase().contains(_searchController.text.toLowerCase()))
-          .toList();
+      if (_searchController.text.isEmpty) {
+        _filteredStudents = _allStudents;
+      } else {
+        _filteredStudents = _allStudents
+            .where((s) => s.id.contains(_searchController.text) || s.name.toLowerCase().contains(_searchController.text.toLowerCase()))
+            .toList();
+      }
     });
   }
 
@@ -313,9 +386,13 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
                       icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       onChanged: (String? newValue) {
-                        setState(() => _selectedWeek = newValue!);
+                        setState(() {
+                          _selectedWeek = newValue!;
+                          _calculateAttendanceRecords();
+                        });
                       },
                       items: <String>[
+                        'All Weeks',
                         'Week 1',
                         'Week 2',
                         'Week 3',
@@ -369,30 +446,32 @@ class _SectionAttendanceScreenState extends State<SectionAttendanceScreen> {
                                       flex: 2,
                                       child: Align(
                                         alignment: Alignment.centerRight,
-                                        child: GestureDetector(
-                                          onTap: () async {
-                                            final warningId = '${widget.courseCode}_manual_warning_${DateTime.now().millisecondsSinceEpoch}';
-                                            await FirebaseFirestore.instance
-                                                .collection('users')
-                                                .doc(student.uid)
-                                                .collection('notifications')
-                                                .doc(warningId)
-                                                .set({
-                                              'title': '⚠️ Instructor Warning',
-                                              'message': 'Your instructor has issued a warning regarding your attendance in ${widget.courseCode}.',
-                                              'courseCode': widget.courseCode,
-                                              'type': 'absence_warning',
-                                              'isRead': false,
-                                              'timestamp': FieldValue.serverTimestamp(),
-                                            });
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Warning sent to ${student.name}.'), backgroundColor: Colors.green),
-                                              );
-                                            }
-                                          },
-                                          child: const Icon(Icons.send_outlined, color: AppColors.primary, size: 18),
-                                        ),
+                                        child: student.overallPercentage > 75
+                                            ? const SizedBox()
+                                            : GestureDetector(
+                                                onTap: () async {
+                                                  final warningId = '${widget.courseCode}_manual_warning_${DateTime.now().millisecondsSinceEpoch}';
+                                                  await FirebaseFirestore.instance
+                                                      .collection('users')
+                                                      .doc(student.uid)
+                                                      .collection('notifications')
+                                                      .doc(warningId)
+                                                      .set({
+                                                    'title': '⚠️ Instructor Warning',
+                                                    'message': 'Your instructor has issued a warning regarding your attendance in ${widget.courseCode}.',
+                                                    'courseCode': widget.courseCode,
+                                                    'type': 'absence_warning',
+                                                    'isRead': false,
+                                                    'timestamp': FieldValue.serverTimestamp(),
+                                                  });
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Warning sent to ${student.name}.'), backgroundColor: Colors.green),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Icon(Icons.send_outlined, color: AppColors.primary, size: 18),
+                                              ),
                                       ),
                                     ),
                                   ],
