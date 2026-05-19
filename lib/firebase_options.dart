@@ -47,11 +47,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCpo7j2X3Vwz2qdcpmd63xWynXvzLC52RE',
-    appId: '1:362847924501:ios:8f15f9b5ae13e94dd6791c',
+    appId: '1:362847924501:ios:90e6798564b720b1d6791c',
     messagingSenderId: '362847924501',
     projectId: 'attendro-main',
     storageBucket: 'attendro-main.firebasestorage.app',
-    iosBundleId: 'com.attendro.app.attendro',
+    iosBundleId: 'com.attendro.app.attendro.shs',
   );
 
 }

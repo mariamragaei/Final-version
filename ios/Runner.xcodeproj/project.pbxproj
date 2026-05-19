@@ -198,8 +198,8 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				6A233D143330EDF609C100DC /* Resign Frameworks Automagic */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
-				0A58A65451216E2EAC633223 /* [CP] Embed Pods Frameworks */,
 				009AA897462C586F1E7BB886 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
@@ -293,27 +293,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		0A58A65451216E2EAC633223 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		0C085837161E551E924A4164 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -351,6 +330,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		6A233D143330EDF609C100DC /* Resign Frameworks Automagic */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Resign Frameworks Automagic";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/sh\necho \"Running Resign Frameworks Automagic...\" > /tmp/resign.log\nif [ -z \"${EXPANDED_CODE_SIGN_IDENTITY}\" ]; then\n  SIGNING_IDENTITY=\"${CODE_SIGN_IDENTITY}\"\nelse\n  SIGNING_IDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY}\"\nfi\n\necho \"Signing Identity: ${SIGNING_IDENTITY}\" >> /tmp/resign.log\n\nif [ -z \"${SIGNING_IDENTITY}\" ] || [ \"${SIGNING_IDENTITY}\" == \"-\" ]; then\n  echo \"No valid signing identity found, skipping auto resigning.\" >> /tmp/resign.log\n  exit 0\nfi\n\nFRAMEWORKS_DIR=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\necho \"Frameworks Directory: ${FRAMEWORKS_DIR}\" >> /tmp/resign.log\nif [ -d \"${FRAMEWORKS_DIR}\" ]; then\n  find \"${FRAMEWORKS_DIR}\" -name \"*.framework\" | while read -r FRAMEWORK_PATH; do\n    echo \"Resigning framework: ${FRAMEWORK_PATH}\" >> /tmp/resign.log\n    rm -rf \"${FRAMEWORK_PATH}/_CodeSignature\"\n    xattr -cr \"${FRAMEWORK_PATH}\"\n    /usr/bin/codesign --force --sign \"${SIGNING_IDENTITY}\" --preserve-metadata=identifier,entitlements --timestamp=none \"${FRAMEWORK_PATH}\" 2>&1 >> /tmp/resign.log\n    echo \"Codesign exit code: $?\" >> /tmp/resign.log\n  done\nfi\n";
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -485,7 +482,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -500,7 +497,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = T3NS995CVC;
+				DEVELOPMENT_TEAM = 75YR8328YJ;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -669,7 +666,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				TARGETED_DEVICE_FAMILY = "1,2";

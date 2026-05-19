@@ -28,7 +28,7 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  use_frameworks! :linkage => :static
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -37,7 +37,82 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Auto-read Development Team from Runner target to assign to all pods targets dynamically
+  project_path = File.join(File.dirname(__FILE__), 'Runner.xcodeproj')
+  project = Xcodeproj::Project.open(project_path)
+  runner_target = project.targets.find { |t| t.name == 'Runner' }
+  
+  development_team = nil
+  runner_target.build_configurations.each do |config|
+    team = config.build_settings['DEVELOPMENT_TEAM']
+    if team && !team.empty?
+      development_team = team
+      break
+    end
+  end
+  development_team ||= 'R75V3P4KFG'
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      if target.respond_to?(:product_type) && target.product_type == 'com.apple.product-type.bundle'
+        config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+        config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+      else
+        config.build_settings['DEVELOPMENT_TEAM'] = development_team
+        config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ""
+        config.build_settings['CODE_SIGNING_REQUIRED'] = "YES"
+        config.build_settings['CODE_SIGNING_ALLOWED'] = "YES"
+      end
+    end
   end
+
+  # Auto-add Run Script to Runner target to resign embedded frameworks dynamically
+  script_name = 'Resign Frameworks Automagic'
+  existing = runner_target.shell_script_build_phases.find { |p| p.name == script_name }
+  if existing
+    runner_target.build_phases.delete(existing)
+  end
+  
+  phase = project.new(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+  phase.name = script_name
+  phase.shell_script = <<~SCRIPT
+    #!/bin/sh
+    echo "Running Resign Frameworks Automagic..." > /tmp/resign.log
+    if [ -z "${EXPANDED_CODE_SIGN_IDENTITY}" ]; then
+      SIGNING_IDENTITY="${CODE_SIGN_IDENTITY}"
+    else
+      SIGNING_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY}"
+    fi
+
+    echo "Signing Identity: ${SIGNING_IDENTITY}" >> /tmp/resign.log
+
+    if [ -z "${SIGNING_IDENTITY}" ] || [ "${SIGNING_IDENTITY}" == "-" ]; then
+      echo "No valid signing identity found, skipping auto resigning." >> /tmp/resign.log
+      exit 0
+    fi
+
+    FRAMEWORKS_DIR="${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+    echo "Frameworks Directory: ${FRAMEWORKS_DIR}" >> /tmp/resign.log
+    if [ -d "${FRAMEWORKS_DIR}" ]; then
+      find "${FRAMEWORKS_DIR}" -name "*.framework" | while read -r FRAMEWORK_PATH; do
+        echo "Resigning framework: ${FRAMEWORK_PATH}" >> /tmp/resign.log
+        rm -rf "${FRAMEWORK_PATH}/_CodeSignature"
+        xattr -cr "${FRAMEWORK_PATH}"
+        /usr/bin/codesign --force --sign "${SIGNING_IDENTITY}" --preserve-metadata=identifier,entitlements --timestamp=none "${FRAMEWORK_PATH}" 2>&1 >> /tmp/resign.log
+        echo "Codesign exit code: $?" >> /tmp/resign.log
+      done
+    fi
+  SCRIPT
+  
+  # Find the index of "Embed Frameworks" phase and insert immediately after it
+  embed_phase_index = runner_target.build_phases.index { |p| p.respond_to?(:name) && p.name == 'Embed Frameworks' }
+  if embed_phase_index
+    runner_target.build_phases.insert(embed_phase_index + 1, phase)
+  else
+    runner_target.build_phases << phase
+  end
+  
+  project.save
 end
+
